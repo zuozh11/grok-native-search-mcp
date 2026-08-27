@@ -21,7 +21,10 @@ const upstream = createServer((request, response) => {
           type: "message",
           content: [{
             type: "output_text",
-            text: "Official answer.<|eos|>",
+            text: JSON.stringify({
+              answer: "Official answer.",
+              citations: [{ url: "https://source.example", should_fetch: false }],
+            }),
             annotations: [{ type: "url_citation", url: "https://source.example" }],
           }],
         },
@@ -65,16 +68,20 @@ assert.deepEqual(
   tools.tools.map((tool) => tool.name),
   ["web_search", "web_fetch"],
 );
-assert.match(client.getInstructions(), /use web_search to access the internet for real-time information/i);
+assert.match(client.getInstructions(), /use web_search once with the user's complete question/i);
+assert.match(client.getInstructions(), /answer from its complete result/i);
 assert.doesNotMatch(client.getInstructions(), /Expand/i);
 assert.equal(tools.tools.some((tool) => /Expand/i.test(tool.description)), false);
 assert.doesNotMatch(client.getInstructions(), /parallel|complementary/i);
 assert.equal(tools.tools.some((tool) => /parallel|complementary/i.test(tool.description)), false);
 assert.match(
   tools.tools.find((tool) => tool.name === "web_fetch").description,
-  /when the task requires reading.*page text of a specific HTTP\(S\) URL/,
+  /specific HTTP\(S\) URL the user asks to read/i,
 );
-assert.match(tools.tools.find((tool) => tool.name === "web_search").description, /real-time information/);
+assert.match(
+  tools.tools.find((tool) => tool.name === "web_search").description,
+  /complete real-time research question/,
+);
 
 const result = await client.callTool({
   name: "web_search",
@@ -83,7 +90,7 @@ const result = await client.callTool({
 const compact = JSON.parse(result.content[0].text);
 assert.deepEqual(compact, {
   answer: "Official answer.",
-  citations: ["https://source.example"],
+  citations: [{ url: "https://source.example", should_fetch: false }],
   model: "grok-4.6-build",
   usage: {
     input_tokens: 10,
@@ -96,6 +103,11 @@ assert.equal(result.content[0].text.includes("must-not-leak"), false);
 assert.equal(upstreamRequest.max_turns, 1);
 assert.equal(upstreamRequest.parallel_tool_calls, true);
 assert.equal(upstreamRequest.tool_choice, "required");
+assert.equal(upstreamRequest.text.format.type, "json_schema");
+assert.deepEqual(
+  upstreamRequest.text.format.schema.properties.citations.items.required,
+  ["url", "should_fetch"],
+);
 assert.match(
   upstreamRequest.instructions,
   /Available source categories include Chinese-language communities, English-language communities, official sources, and general public websites/i,
@@ -104,6 +116,8 @@ assert.match(
   upstreamRequest.instructions,
   /Select the categories relevant to the query/i,
 );
+assert.match(upstreamRequest.instructions, /Set should_fetch to true when its page text is required/i);
+assert.match(upstreamRequest.instructions, /Set should_fetch to false when the search result supports the answer/i);
 assert.doesNotMatch(upstreamRequest.instructions, /parallel|all categories/i);
 assert.deepEqual(upstreamRequest.tools, [{ type: "web_search" }, { type: "x_search" }]);
 

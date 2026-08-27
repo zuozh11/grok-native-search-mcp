@@ -7,7 +7,7 @@ import { z } from "zod";
 
 const server = new McpServer({
   name: "grok-native-search",
-  version: "1.0.3",
+  version: "1.0.4",
 }, {
   instructions:
     "Routing and depth: complementary discovery queries may run in parallel. Stop when the " +
@@ -18,6 +18,33 @@ const server = new McpServer({
 });
 
 const jinaProxyAgent = new EnvHttpProxyAgent();
+
+function compactSearchResponse(payload) {
+  const outputText = (payload.output ?? [])
+    .flatMap((item) => (item.type === "message" ? item.content ?? [] : []))
+    .filter((item) => item.type === "output_text");
+  const answer = outputText
+    .map((item) => item.text)
+    .join("\n")
+    .replace(/<\|eos\|>\s*$/, "");
+  const citedUrls = outputText.flatMap((item) =>
+    (item.annotations ?? []).flatMap((annotation) => annotation.url ? [annotation.url] : []),
+  );
+  const citations = [...new Set(citedUrls.length ? citedUrls : payload.citations ?? [])];
+
+  return {
+    answer,
+    citations,
+    model: payload.model,
+    status: payload.status,
+    usage: {
+      input_tokens: payload.usage?.input_tokens,
+      output_tokens: payload.usage?.output_tokens,
+      total_tokens: payload.usage?.total_tokens,
+      tool_calls: payload.usage?.server_side_tool_usage_details,
+    },
+  };
+}
 
 function registerSearchTool(name, description) {
   server.registerTool(
@@ -54,8 +81,11 @@ function registerSearchTool(name, description) {
       });
 
       const body = await response.text();
+      const text = response.ok
+        ? JSON.stringify(compactSearchResponse(JSON.parse(body)))
+        : body;
       return {
-        content: [{ type: "text", text: body }],
+        content: [{ type: "text", text }],
         isError: !response.ok,
       };
     },
@@ -68,7 +98,8 @@ registerSearchTool(
     "public web. Complementary queries may run in parallel when multiple evidence lanes are " +
     "needed. Stop after an authoritative source answers the question; deepen only for missing or " +
     "conflicting evidence. For X-only content use x_search. After finding a page whose contents " +
-    "must be verified, call web_fetch with its exact URL. Returns the raw xAI Responses API body.",
+    "must be verified, call web_fetch with its exact URL. Returns compact JSON containing the " +
+    "answer, cited URLs, model, status, token usage, and server-side tool-call counts.",
 );
 
 registerSearchTool(
@@ -77,7 +108,8 @@ registerSearchTool(
     "web_search for X content. Complementary X queries may run in parallel. Stop when the requested " +
     "official post or account result is found; deepen only if evidence is missing or conflicting. " +
     "If a post links to an external page that must be read, call web_fetch with that URL. Returns " +
-    "the raw xAI Responses API body.",
+    "compact JSON containing the answer, cited URLs, model, status, token usage, and server-side " +
+    "tool-call counts.",
 );
 
 server.registerTool(

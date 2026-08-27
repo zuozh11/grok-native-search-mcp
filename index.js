@@ -7,19 +7,17 @@ import { z } from "zod";
 
 const server = new McpServer({
   name: "grok-native-search",
-  version: "1.0.5",
+  version: "1.0.6",
 }, {
   instructions:
-    "For every web research task, use this MCP. Use web_search for public-web discovery, x_search " +
-    "for X posts, accounts, and threads, and web_fetch for every known URL or source returned by " +
-    "search. Run complementary discovery queries in parallel. Verify authoritative first-party " +
-    "URLs with web_fetch, then answer. Conclude as soon as first-party evidence resolves the " +
-    "question. Expand the investigation when evidence needs clarification or reconciliation.",
+    "Use web_search to access the internet for real-time information. Use " +
+    "web_fetch to read a specific HTTP(S) URL.",
 });
 
 const jinaProxyAgent = new EnvHttpProxyAgent();
 
 function compactSearchResponse(payload) {
+  const toolCalls = payload.usage?.server_side_tool_usage_details ?? {};
   const outputText = (payload.output ?? [])
     .flatMap((item) => (item.type === "message" ? item.content ?? [] : []))
     .filter((item) => item.type === "output_text");
@@ -36,90 +34,71 @@ function compactSearchResponse(payload) {
     answer,
     citations,
     model: payload.model,
-    status: payload.status,
     usage: {
       input_tokens: payload.usage?.input_tokens,
       output_tokens: payload.usage?.output_tokens,
       total_tokens: payload.usage?.total_tokens,
-      tool_calls: payload.usage?.server_side_tool_usage_details,
+      tool_calls: {
+        web_search_calls: toolCalls.web_search_calls ?? 0,
+        x_search_calls: toolCalls.x_search_calls ?? 0,
+      },
     },
   };
 }
 
-function registerSearchTool(name, description) {
-  server.registerTool(
-    name,
-    {
-      description,
-      inputSchema: {
-        query: z.string().min(1).describe("The question or search query to investigate"),
-      },
-      annotations: {
-        readOnlyHint: true,
-      },
-    },
-    async ({ query }) => {
-      const baseUrl = process.env.XAI_BASE_URL ?? "https://aiapiv2.kamipon.com:442/v1";
-      const response = await fetch(`${baseUrl.replace(/\/$/, "")}/responses`, {
-        method: "POST",
-        headers: {
-          Authorization: `Bearer ${process.env.XAI_API_KEY}`,
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          model: "grok-4.6",
-          reasoning: { effort: "low" },
-          max_turns: 1,
-          instructions:
-            "Use a single tool-call turn and run complementary searches in parallel. Begin with " +
-            "the most authoritative first-party source. Conclude as soon as direct evidence resolves " +
-            "the question. Expand the scope when evidence needs clarification or reconciliation. " +
-            "Keep every query distinct and purposeful.",
-          input: query,
-          tools: [{ type: name }],
-        }),
-      });
-
-      const body = await response.text();
-      const text = response.ok
-        ? JSON.stringify(compactSearchResponse(JSON.parse(body)))
-        : body;
-      return {
-        content: [{ type: "text", text }],
-        isError: !response.ok,
-      };
-    },
-  );
-}
-
-registerSearchTool(
+server.registerTool(
   "web_search",
-  "Use this tool to discover current public-web information and relevant URLs. Run complementary " +
-    "queries in parallel, then verify authoritative first-party URLs with web_fetch. Answer as " +
-    "soon as first-party evidence resolves the question. Expand with targeted queries when evidence " +
-    "needs clarification or reconciliation. Returns compact JSON containing the answer, cited URLs, " +
-    "model, status, token usage, and server-side tool-call counts.",
-);
+  {
+    description:
+      "Use this tool for real-time information. Returns compact JSON containing the answer, " +
+      "cited URLs, model, token usage, and Web/X search-call counts.",
+    inputSchema: {
+      query: z.string().min(1).describe("The question to search"),
+    },
+    annotations: {
+      readOnlyHint: true,
+    },
+  },
+  async ({ query }) => {
+    const baseUrl = process.env.XAI_BASE_URL ?? "https://aiapiv2.kamipon.com:442/v1";
+    const response = await fetch(`${baseUrl.replace(/\/$/, "")}/responses`, {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${process.env.XAI_API_KEY}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        model: "grok-4.6",
+        reasoning: { effort: "low" },
+        max_turns: 1,
+        tool_choice: "required",
+        instructions:
+          "Return a concise answer with citations as soon as the search result resolves the question.",
+        input: query,
+        tools: [{ type: "web_search" }, { type: "x_search" }],
+      }),
+    });
 
-registerSearchTool(
-  "x_search",
-  "Use this tool for every task about current X posts, accounts, threads, replies, and trends. Run " +
-    "complementary X queries in parallel. Verify linked external pages with web_fetch. Answer as " +
-    "soon as the requested official post or account result is established. Expand with targeted " +
-    "queries when evidence needs clarification or reconciliation. Returns compact JSON containing " +
-    "the answer, cited URLs, model, status, token usage, and server-side tool-call counts.",
+    const body = await response.text();
+    const text = response.ok
+      ? JSON.stringify(compactSearchResponse(JSON.parse(body)))
+      : body;
+    return {
+      content: [{ type: "text", text }],
+      isError: !response.ok,
+    };
+  },
 );
 
 server.registerTool(
   "web_fetch",
   {
     description:
-      "Use this tool for every known HTTP(S) URL, including sources returned by web_search or " +
-      "x_search, to read, quote, summarize, or verify page text. After discovery, fetch authoritative " +
-      "first-party URLs in parallel. Returns raw Markdown from Jina Reader.",
+      "Use this tool to read, quote, summarize, or verify the page text of a specific HTTP(S) URL. " +
+      "Returns raw Markdown from Jina Reader.",
     inputSchema: {
       url: z.url().describe(
-        "Exact HTTP(S) URL to read; pass source URLs from web_search or x_search unchanged",
+        "Exact HTTP(S) URL to read; pass source URLs from web_search unchanged",
       ),
     },
     annotations: {

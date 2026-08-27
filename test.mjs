@@ -30,7 +30,15 @@ const upstream = createServer((request, response) => {
         input_tokens: 10,
         output_tokens: 5,
         total_tokens: 15,
-        server_side_tool_usage_details: { web_search_calls: 1 },
+        server_side_tool_usage_details: {
+          web_search_calls: 1,
+          x_search_calls: 0,
+          code_interpreter_calls: 0,
+          file_search_calls: 0,
+          mcp_calls: 0,
+          document_search_calls: 0,
+          image_generation_calls: 0,
+        },
       },
     }));
   });
@@ -55,18 +63,18 @@ await client.connect(transport);
 const tools = await client.listTools();
 assert.deepEqual(
   tools.tools.map((tool) => tool.name),
-  ["web_search", "x_search", "web_fetch"],
+  ["web_search", "web_fetch"],
 );
-assert.match(client.getInstructions(), /For every web research task, use this MCP/i);
-assert.match(client.getInstructions(), /Verify authoritative first-party URLs/i);
+assert.match(client.getInstructions(), /use web_search to access the internet for real-time information/i);
+assert.doesNotMatch(client.getInstructions(), /Expand/i);
+assert.equal(tools.tools.some((tool) => /Expand/i.test(tool.description)), false);
+assert.doesNotMatch(client.getInstructions(), /parallel|complementary/i);
+assert.equal(tools.tools.some((tool) => /parallel|complementary/i.test(tool.description)), false);
 assert.match(
   tools.tools.find((tool) => tool.name === "web_fetch").description,
-  /Use this tool for every known HTTP\(S\) URL/,
+  /page text of a specific HTTP\(S\) URL/,
 );
-assert.match(
-  tools.tools.find((tool) => tool.name === "x_search").description,
-  /Use this tool for every task about current X posts/,
-);
+assert.match(tools.tools.find((tool) => tool.name === "web_search").description, /real-time information/);
 
 const result = await client.callTool({
   name: "web_search",
@@ -77,17 +85,18 @@ assert.deepEqual(compact, {
   answer: "Official answer.",
   citations: ["https://source.example"],
   model: "grok-4.6-build",
-  status: "completed",
   usage: {
     input_tokens: 10,
     output_tokens: 5,
     total_tokens: 15,
-    tool_calls: { web_search_calls: 1 },
+    tool_calls: { web_search_calls: 1, x_search_calls: 0 },
   },
 });
 assert.equal(result.content[0].text.includes("must-not-leak"), false);
 assert.equal(upstreamRequest.max_turns, 1);
-assert.deepEqual(upstreamRequest.tools, [{ type: "web_search" }]);
+assert.equal(upstreamRequest.tool_choice, "required");
+assert.doesNotMatch(upstreamRequest.instructions, /parallel|complementary/i);
+assert.deepEqual(upstreamRequest.tools, [{ type: "web_search" }, { type: "x_search" }]);
 
 await client.close();
 await new Promise((resolve, reject) => upstream.close((error) => error ? reject(error) : resolve()));

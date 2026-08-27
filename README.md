@@ -1,20 +1,17 @@
 # Grok Native Search MCP
 
-一个极简的 stdio MCP Server，提供三个只读工具：
+一个极简的 stdio MCP Server，提供两个只读工具：
 
-- `web_search(query)`：Grok 原生 Web Search
-- `x_search(query)`：Grok 原生 X Search
+- `web_search(query)`：Grok 原生 Web Search 与 X Search
 - `web_fetch(url)`：Jina Reader 网页转 Markdown
 
-搜索固定使用 `grok-4.6`、`reasoning.effort: low` 和 `max_turns: 1`。单轮内允许互补搜索并行执行，
-找到足够的一手证据后停止，需要澄清或协调证据时扩大范围。
+搜索固定使用 `grok-4.6`、`reasoning.effort: low` 和 `max_turns: 1`。搜索答案解决问题后立即回答。
 
-`web_search` 和 `x_search` 返回紧凑 JSON，只保留最终答案、实际引用、模型、状态、token 用量与
-底层工具调用统计；`web_fetch` 继续原样返回 Jina Reader Markdown。
+`web_search` 返回紧凑 JSON，只保留最终答案、实际引用、模型、token 用量与 Web/X 搜索调用统计；
+`web_fetch` 继续原样返回 Jina Reader Markdown。
 
-所有网页研究使用本 MCP：全网信息和来源发现使用 `web_search`；X 帖子、账号、线程和趋势使用
-`x_search`；已知 URL 和搜索得到的来源使用 `web_fetch`。互补查询并行执行，随后读取权威一手
-来源；一手证据解决问题后立即回答，需要澄清或协调证据时继续深入。
+使用 `web_search` 联网获取实时信息；使用 `web_fetch` 读取具体 URL 的正文。搜索答案解决问题后
+立即回答。
 
 ## 环境变量
 

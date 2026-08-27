@@ -8,6 +8,13 @@ import { z } from "zod";
 const server = new McpServer({
   name: "grok-native-search",
   version: "1.0.1",
+}, {
+  instructions:
+    "Routing: use web_fetch whenever an exact URL is known or page text must be verified. " +
+    "Prefer it over Browser, curl, and shell unless it fails or the task requires login, " +
+    "clicks, forms, visual inspection, or browser state. Use x_search for X posts, accounts, " +
+    "threads, replies, and trends. Use web_search for other discovery. After search returns a " +
+    "relevant external URL, use web_fetch to read it.",
 });
 
 const jinaProxyAgent = new EnvHttpProxyAgent();
@@ -18,7 +25,7 @@ function registerSearchTool(name, description) {
     {
       description,
       inputSchema: {
-        query: z.string().min(1).describe("搜索问题"),
+        query: z.string().min(1).describe("The question or search query to investigate"),
       },
       annotations: {
         readOnlyHint: true,
@@ -51,20 +58,30 @@ function registerSearchTool(name, description) {
 
 registerSearchTool(
   "web_search",
-  "使用 Grok 原生 Web Search 搜索，并原样返回 xAI Responses API 响应",
+  "Use this when no exact URL is known and current information must be discovered across the " +
+    "public web. For X-only content use x_search. After finding a page whose contents must be " +
+    "verified, call web_fetch with its exact URL. Returns the raw xAI Responses API body.",
 );
 
 registerSearchTool(
   "x_search",
-  "使用 Grok 原生 X Search 搜索，并原样返回 xAI Responses API 响应",
+  "Use this for current X posts, accounts, threads, replies, and trends. Prefer it over " +
+    "web_search for X content. If a post links to an external page that must be read, call " +
+    "web_fetch with that URL. Returns the raw xAI Responses API body.",
 );
 
 server.registerTool(
   "web_fetch",
   {
-    description: "使用 Jina Reader 读取网页，并原样返回 Markdown",
+    description:
+      "Use this when an exact HTTP(S) URL is known, including URLs returned by web_search or " +
+      "x_search, and the task is to read, quote, summarize, or verify page text. Prefer it over " +
+      "Browser, curl, or shell when no login, click, form interaction, or visual inspection is " +
+      "required. Do not use it to discover URLs. Returns raw Markdown from Jina Reader.",
     inputSchema: {
-      url: z.url().describe("要读取的网页 URL"),
+      url: z.url().describe(
+        "Exact HTTP(S) URL to read; pass source URLs from web_search or x_search unchanged",
+      ),
     },
     annotations: {
       readOnlyHint: true,

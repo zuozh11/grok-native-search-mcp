@@ -16,5 +16,14 @@ assert.deepEqual(
   tools.tools.map((tool) => tool.name),
   ["web_search", "x_search", "web_fetch"],
 );
+assert.match(client.getInstructions(), /use web_fetch whenever an exact URL is known/i);
+assert.match(
+  tools.tools.find((tool) => tool.name === "web_fetch").description,
+  /Prefer it over Browser, curl, or shell/,
+);
+assert.match(
+  tools.tools.find((tool) => tool.name === "x_search").description,
+  /Prefer it over web_search for X content/,
+);
 
 await client.close();

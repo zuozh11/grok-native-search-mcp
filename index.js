@@ -2,12 +2,15 @@
 
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
+import { EnvHttpProxyAgent } from "undici";
 import { z } from "zod";
 
 const server = new McpServer({
   name: "grok-native-search",
-  version: "1.0.0",
+  version: "1.0.1",
 });
+
+const jinaProxyAgent = new EnvHttpProxyAgent();
 
 function registerSearchTool(name, description) {
   server.registerTool(
@@ -69,6 +72,7 @@ server.registerTool(
   },
   async ({ url }) => {
     const response = await fetch(`https://r.jina.ai/${url}`, {
+      dispatcher: jinaProxyAgent,
       headers: {
         Authorization: `Bearer ${process.env.JINA_API_KEY}`,
       },

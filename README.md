@@ -6,7 +6,9 @@
 - `x_search(query)`：Grok 原生 X Search
 - `web_fetch(url)`：Jina Reader 网页转 Markdown
 
-搜索固定使用 `grok-4.6` 和 `reasoning.effort: low`。工具响应不做解析或改写，直接作为 MCP 文本返回。
+搜索固定使用 `grok-4.6`、`reasoning.effort: low` 和 `max_turns: 2`。搜索从一个聚焦查询开始，
+找到足够的一手证据后停止，仅在证据缺失或冲突时扩大范围。工具响应不做解析或改写，直接作为
+MCP 文本返回。
 
 工具路由：已知 URL 或需要核验页面正文时使用 `web_fetch`；X 帖子、账号、线程和趋势使用
 `x_search`；尚无明确 URL 的其他全网检索使用 `web_search`。搜索得到需要核验的外部 URL 后，

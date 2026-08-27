@@ -1,0 +1,47 @@
+{
+  "name": "grok-native-search-mcp",
+  "version": "1.0.0",
+  "description": "MCP server for Grok native Web Search, X Search, and Jina Reader web fetch",
+  "type": "module",
+  "bin": {
+    "grok-native-search-mcp": "index.js"
+  },
+  "files": [
+    "index.js",
+    "README.md",
+    "LICENSE"
+  ],
+  "scripts": {
+    "start": "node index.js",
+    "test": "node --test test.mjs",
+    "prepublishOnly": "npm test"
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/zuozh11/grok-native-search-mcp.git"
+  },
+  "bugs": {
+    "url": "https://github.com/zuozh11/grok-native-search-mcp/issues"
+  },
+  "homepage": "https://github.com/zuozh11/grok-native-search-mcp#readme",
+  "keywords": [
+    "mcp",
+    "grok",
+    "xai",
+    "web-search",
+    "x-search",
+    "jina"
+  ],
+  "author": "zuozh11",
+  "license": "MIT",
+  "publishConfig": {
+    "access": "public"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "1.30.0",
+    "zod": "^4.0.0"
+  }
+}

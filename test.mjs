@@ -57,15 +57,15 @@ assert.deepEqual(
   tools.tools.map((tool) => tool.name),
   ["web_search", "x_search", "web_fetch"],
 );
-assert.match(client.getInstructions(), /complementary discovery queries may run in parallel/i);
-assert.match(client.getInstructions(), /avoid exact duplicates/i);
+assert.match(client.getInstructions(), /For every web research task, use this MCP/i);
+assert.match(client.getInstructions(), /Verify authoritative first-party URLs/i);
 assert.match(
   tools.tools.find((tool) => tool.name === "web_fetch").description,
-  /Prefer it over Browser, curl, or shell/,
+  /Use this tool for every known HTTP\(S\) URL/,
 );
 assert.match(
   tools.tools.find((tool) => tool.name === "x_search").description,
-  /Prefer it over web_search for X content/,
+  /Use this tool for every task about current X posts/,
 );
 
 const result = await client.callTool({

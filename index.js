@@ -7,14 +7,14 @@ import { z } from "zod";
 
 const server = new McpServer({
   name: "grok-native-search",
-  version: "1.0.4",
+  version: "1.0.5",
 }, {
   instructions:
-    "Routing and depth: complementary discovery queries may run in parallel. Stop when the " +
-    "question is answered and supported by an authoritative first-party source. Deepen only if " +
-    "evidence is incomplete or conflicting; avoid exact duplicates. Use web_fetch for known URLs " +
-    "and page-text verification, before Browser, curl, or shell unless interaction or visual " +
-    "inspection is required. Use x_search for X content and web_search for other discovery.",
+    "For every web research task, use this MCP. Use web_search for public-web discovery, x_search " +
+    "for X posts, accounts, and threads, and web_fetch for every known URL or source returned by " +
+    "search. Run complementary discovery queries in parallel. Verify authoritative first-party " +
+    "URLs with web_fetch, then answer. Conclude as soon as first-party evidence resolves the " +
+    "question. Expand the investigation when evidence needs clarification or reconciliation.",
 });
 
 const jinaProxyAgent = new EnvHttpProxyAgent();
@@ -71,10 +71,10 @@ function registerSearchTool(name, description) {
           reasoning: { effort: "low" },
           max_turns: 1,
           instructions:
-            "Use a single tool-call turn. You may run complementary searches in parallel. Start " +
-            "with the most authoritative first-party source and stop as soon as the question is " +
-            "answered and directly supported. Broaden only when evidence is missing or conflicting. " +
-            "Avoid exact duplicate searches.",
+            "Use a single tool-call turn and run complementary searches in parallel. Begin with " +
+            "the most authoritative first-party source. Conclude as soon as direct evidence resolves " +
+            "the question. Expand the scope when evidence needs clarification or reconciliation. " +
+            "Keep every query distinct and purposeful.",
           input: query,
           tools: [{ type: name }],
         }),
@@ -94,32 +94,29 @@ function registerSearchTool(name, description) {
 
 registerSearchTool(
   "web_search",
-  "Use this when no exact URL is known and current information must be discovered across the " +
-    "public web. Complementary queries may run in parallel when multiple evidence lanes are " +
-    "needed. Stop after an authoritative source answers the question; deepen only for missing or " +
-    "conflicting evidence. For X-only content use x_search. After finding a page whose contents " +
-    "must be verified, call web_fetch with its exact URL. Returns compact JSON containing the " +
-    "answer, cited URLs, model, status, token usage, and server-side tool-call counts.",
+  "Use this tool to discover current public-web information and relevant URLs. Run complementary " +
+    "queries in parallel, then verify authoritative first-party URLs with web_fetch. Answer as " +
+    "soon as first-party evidence resolves the question. Expand with targeted queries when evidence " +
+    "needs clarification or reconciliation. Returns compact JSON containing the answer, cited URLs, " +
+    "model, status, token usage, and server-side tool-call counts.",
 );
 
 registerSearchTool(
   "x_search",
-  "Use this for current X posts, accounts, threads, replies, and trends. Prefer it over " +
-    "web_search for X content. Complementary X queries may run in parallel. Stop when the requested " +
-    "official post or account result is found; deepen only if evidence is missing or conflicting. " +
-    "If a post links to an external page that must be read, call web_fetch with that URL. Returns " +
-    "compact JSON containing the answer, cited URLs, model, status, token usage, and server-side " +
-    "tool-call counts.",
+  "Use this tool for every task about current X posts, accounts, threads, replies, and trends. Run " +
+    "complementary X queries in parallel. Verify linked external pages with web_fetch. Answer as " +
+    "soon as the requested official post or account result is established. Expand with targeted " +
+    "queries when evidence needs clarification or reconciliation. Returns compact JSON containing " +
+    "the answer, cited URLs, model, status, token usage, and server-side tool-call counts.",
 );
 
 server.registerTool(
   "web_fetch",
   {
     description:
-      "Use this when an exact HTTP(S) URL is known, including URLs returned by web_search or " +
-      "x_search, and the task is to read, quote, summarize, or verify page text. Prefer it over " +
-      "Browser, curl, or shell when no login, click, form interaction, or visual inspection is " +
-      "required. Do not use it to discover URLs. Returns raw Markdown from Jina Reader.",
+      "Use this tool for every known HTTP(S) URL, including sources returned by web_search or " +
+      "x_search, to read, quote, summarize, or verify page text. After discovery, fetch authoritative " +
+      "first-party URLs in parallel. Returns raw Markdown from Jina Reader.",
     inputSchema: {
       url: z.url().describe(
         "Exact HTTP(S) URL to read; pass source URLs from web_search or x_search unchanged",

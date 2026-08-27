@@ -6,7 +6,7 @@
 - `x_search(query)`：Grok 原生 X Search
 - `web_fetch(url)`：Jina Reader 网页转 Markdown
 
-搜索固定使用 `grok-4.6`、`reasoning.effort: low` 和 `max_turns: 2`。搜索从一个聚焦查询开始，
+搜索固定使用 `grok-4.6`、`reasoning.effort: low` 和 `max_turns: 1`。单轮内允许互补搜索并行执行，
 找到足够的一手证据后停止，仅在证据缺失或冲突时扩大范围。工具响应不做解析或改写，直接作为
 MCP 文本返回。
 

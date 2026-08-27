@@ -1,6 +1,6 @@
 {
   "name": "grok-native-search-mcp",
-  "version": "1.0.2",
+  "version": "1.0.3",
   "description": "MCP server for Grok native Web Search, X Search, and Jina Reader web fetch",
   "type": "module",
   "bin": {

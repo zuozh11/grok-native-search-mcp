@@ -7,14 +7,14 @@ import { z } from "zod";
 
 const server = new McpServer({
   name: "grok-native-search",
-  version: "1.0.2",
+  version: "1.0.3",
 }, {
   instructions:
-    "Routing and depth: start with one focused search. Stop when the question is answered and " +
-    "supported by an authoritative first-party source. Deepen only if evidence is incomplete or " +
-    "conflicting; do not run overlapping searches. Use web_fetch for known URLs and page-text " +
-    "verification, before Browser, curl, or shell unless interaction or visual inspection is " +
-    "required. Use x_search for X content and web_search for other discovery.",
+    "Routing and depth: complementary discovery queries may run in parallel. Stop when the " +
+    "question is answered and supported by an authoritative first-party source. Deepen only if " +
+    "evidence is incomplete or conflicting; avoid exact duplicates. Use web_fetch for known URLs " +
+    "and page-text verification, before Browser, curl, or shell unless interaction or visual " +
+    "inspection is required. Use x_search for X content and web_search for other discovery.",
 });
 
 const jinaProxyAgent = new EnvHttpProxyAgent();
@@ -42,11 +42,12 @@ function registerSearchTool(name, description) {
         body: JSON.stringify({
           model: "grok-4.6",
           reasoning: { effort: "low" },
-          max_turns: 2,
+          max_turns: 1,
           instructions:
-            "Search incrementally. Start with the most authoritative first-party source. Stop " +
-            "as soon as the question is answered and directly supported. Broaden only when " +
-            "evidence is missing or conflicting. Avoid redundant or overlapping searches.",
+            "Use a single tool-call turn. You may run complementary searches in parallel. Start " +
+            "with the most authoritative first-party source and stop as soon as the question is " +
+            "answered and directly supported. Broaden only when evidence is missing or conflicting. " +
+            "Avoid exact duplicate searches.",
           input: query,
           tools: [{ type: name }],
         }),
@@ -64,19 +65,19 @@ function registerSearchTool(name, description) {
 registerSearchTool(
   "web_search",
   "Use this when no exact URL is known and current information must be discovered across the " +
-    "public web. Start with one focused query and stop after an authoritative source answers it; " +
-    "deepen only for missing or conflicting evidence. For X-only content use x_search. After " +
-    "finding a page whose contents must be verified, call web_fetch with its exact URL. Returns " +
-    "the raw xAI Responses API body.",
+    "public web. Complementary queries may run in parallel when multiple evidence lanes are " +
+    "needed. Stop after an authoritative source answers the question; deepen only for missing or " +
+    "conflicting evidence. For X-only content use x_search. After finding a page whose contents " +
+    "must be verified, call web_fetch with its exact URL. Returns the raw xAI Responses API body.",
 );
 
 registerSearchTool(
   "x_search",
   "Use this for current X posts, accounts, threads, replies, and trends. Prefer it over " +
-    "web_search for X content. Start with one focused query and stop when the requested official " +
-    "post or account result is found; deepen only if evidence is missing or conflicting. If a " +
-    "post links to an external page that must be read, call web_fetch with that URL. Returns the " +
-    "raw xAI Responses API body.",
+    "web_search for X content. Complementary X queries may run in parallel. Stop when the requested " +
+    "official post or account result is found; deepen only if evidence is missing or conflicting. " +
+    "If a post links to an external page that must be read, call web_fetch with that URL. Returns " +
+    "the raw xAI Responses API body.",
 );
 
 server.registerTool(

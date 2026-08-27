@@ -16,8 +16,8 @@ assert.deepEqual(
   tools.tools.map((tool) => tool.name),
   ["web_search", "x_search", "web_fetch"],
 );
-assert.match(client.getInstructions(), /start with one focused search/i);
-assert.match(client.getInstructions(), /do not run overlapping searches/i);
+assert.match(client.getInstructions(), /complementary discovery queries may run in parallel/i);
+assert.match(client.getInstructions(), /avoid exact duplicates/i);
 assert.match(
   tools.tools.find((tool) => tool.name === "web_fetch").description,
   /Prefer it over Browser, curl, or shell/,

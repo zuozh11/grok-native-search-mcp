@@ -7,11 +7,11 @@ import { z } from "zod";
 
 const server = new McpServer({
   name: "grok-native-search",
-  version: "1.0.6",
+  version: "1.0.7",
 }, {
   instructions:
     "Use web_search to access the internet for real-time information. Use " +
-    "web_fetch to read a specific HTTP(S) URL.",
+    "web_fetch when the task requires the page text of a specific HTTP(S) URL.",
 });
 
 const jinaProxyAgent = new EnvHttpProxyAgent();
@@ -71,9 +71,13 @@ server.registerTool(
         model: "grok-4.6",
         reasoning: { effort: "low" },
         max_turns: 1,
+        parallel_tool_calls: true,
         tool_choice: "required",
         instructions:
-          "Return a concise answer with citations as soon as the search result resolves the question.",
+          "Available source categories include Chinese-language communities, English-language " +
+          "communities, official sources, and general public websites. Select the categories " +
+          "relevant to the query. Return a concise answer with citations as soon as the search " +
+          "result resolves the question.",
         input: query,
         tools: [{ type: "web_search" }, { type: "x_search" }],
       }),
@@ -94,8 +98,8 @@ server.registerTool(
   "web_fetch",
   {
     description:
-      "Use this tool to read, quote, summarize, or verify the page text of a specific HTTP(S) URL. " +
-      "Returns raw Markdown from Jina Reader.",
+      "Use this tool when the task requires reading, quoting, summarizing, or verifying the page " +
+      "text of a specific HTTP(S) URL. Returns raw Markdown from Jina Reader.",
     inputSchema: {
       url: z.url().describe(
         "Exact HTTP(S) URL to read; pass source URLs from web_search unchanged",

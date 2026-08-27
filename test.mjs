@@ -72,7 +72,7 @@ assert.doesNotMatch(client.getInstructions(), /parallel|complementary/i);
 assert.equal(tools.tools.some((tool) => /parallel|complementary/i.test(tool.description)), false);
 assert.match(
   tools.tools.find((tool) => tool.name === "web_fetch").description,
-  /page text of a specific HTTP\(S\) URL/,
+  /when the task requires reading.*page text of a specific HTTP\(S\) URL/,
 );
 assert.match(tools.tools.find((tool) => tool.name === "web_search").description, /real-time information/);
 
@@ -94,8 +94,17 @@ assert.deepEqual(compact, {
 });
 assert.equal(result.content[0].text.includes("must-not-leak"), false);
 assert.equal(upstreamRequest.max_turns, 1);
+assert.equal(upstreamRequest.parallel_tool_calls, true);
 assert.equal(upstreamRequest.tool_choice, "required");
-assert.doesNotMatch(upstreamRequest.instructions, /parallel|complementary/i);
+assert.match(
+  upstreamRequest.instructions,
+  /Available source categories include Chinese-language communities, English-language communities, official sources, and general public websites/i,
+);
+assert.match(
+  upstreamRequest.instructions,
+  /Select the categories relevant to the query/i,
+);
+assert.doesNotMatch(upstreamRequest.instructions, /parallel|all categories/i);
 assert.deepEqual(upstreamRequest.tools, [{ type: "web_search" }, { type: "x_search" }]);
 
 await client.close();

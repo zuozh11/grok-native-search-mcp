@@ -5,13 +5,15 @@
 - `web_search(query)`：Grok 原生 Web Search 与 X Search
 - `web_fetch(url)`：Jina Reader 网页转 Markdown
 
-搜索固定使用 `grok-4.6`、`reasoning.effort: low` 和 `max_turns: 1`。搜索答案解决问题后立即回答。
+搜索固定使用 `grok-4.6`、`reasoning.effort: low`、`max_turns: 1` 和
+`parallel_tool_calls: true`。可用来源包括中文社区、英文社区、官方途径和通用公开网站，由 Grok
+根据问题选择相关类别。搜索答案解决问题后立即回答。
 
 `web_search` 返回紧凑 JSON，只保留最终答案、实际引用、模型、token 用量与 Web/X 搜索调用统计；
 `web_fetch` 继续原样返回 Jina Reader Markdown。
 
-使用 `web_search` 联网获取实时信息；使用 `web_fetch` 读取具体 URL 的正文。搜索答案解决问题后
-立即回答。
+使用 `web_search` 联网获取实时信息；任务需要具体 URL 的正文时使用 `web_fetch`。搜索答案解决
+问题后立即回答。
 
 ## 环境变量
 
